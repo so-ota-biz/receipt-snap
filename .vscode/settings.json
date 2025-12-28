@@ -1,0 +1,47 @@
+{
+  // 改行コードを LF に統一
+  "files.eol": "\n",
+
+  // 保存時に自動フォーマット
+  "editor.formatOnSave": true,
+
+  // デフォルトフォーマッタを Prettier に固定
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // 言語別に明示指定（競合回避）
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  // Prettier の設定（必要に応じて）
+  "prettier.printWidth": 80,
+  "prettier.singleQuote": true,
+  "prettier.semi": true,
+  "prettier.trailingComma": "es5",
+  "prettier.tabWidth": 2,
+  "prettier.useTabs": false,
+
+  // ESLint との併用時（保存時に自動修正）
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+
+  // Prettier に関する警告を出す
+  "prettier.requireConfig": false, // trueにすると.config必須になる
+
+  // 不要なら VS Code 内蔵フォーマッタを無効化
+  "javascript.format.enable": false,
+  "typescript.format.enable": false
+}
