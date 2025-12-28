@@ -1,0 +1,80 @@
+services:
+  # MySQL
+  mysql:
+    image: mysql:8.4
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: receipt_snap_db
+      MYSQL_USER: receipt_snap_user
+      MYSQL_PASSWORD: receipt_snap_password
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - receipt_snap_network
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # モックAPI
+  mock-api:
+    build:
+      context: ./mock-api
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - '3001:3001'
+    volumes:
+      - ./mock-api:/app
+      - /app/node_modules
+    networks:
+      receipt_snap_network:
+        aliases:
+          - example.com
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3001']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # 本体API
+  backend-api:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: receipt_snap_user
+      DB_PASSWORD: receipt_snap_password
+      DB_NAME: receipt_snap_db
+      # モックAPI URL
+      EXTERNAL_API_URL: http://example.com:3001
+      # その他
+      NODE_ENV: development
+      PORT: 3000
+    volumes:
+      - ./backend-api:/app
+      - /app/node_modules
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mock-api:
+        condition: service_started
+    networks:
+      - receipt_snap_network
+
+volumes:
+  mysql_data:
+
+networks:
+  receipt_snap_network:
+    driver: bridge
