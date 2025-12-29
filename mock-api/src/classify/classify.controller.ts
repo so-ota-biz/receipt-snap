@@ -1,4 +1,11 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common'
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Logger
+} from '@nestjs/common'
 
 interface ClassifyRequest {
   image_path: string
@@ -15,13 +22,28 @@ interface ClassifyResponse {
 
 @Controller('api/v1')
 export class ClassifyController {
+  private readonly logger = new Logger(ClassifyController.name)
+
   @Post('classify')
   @HttpCode(HttpStatus.OK)
   async classify(@Body() request: ClassifyRequest): Promise<ClassifyResponse> {
+    this.logger.log('=== Mock API: Classify endpoint called ===')
+    this.logger.log(`Received request:`, request)
+
     const { image_path } = request
 
+    if (!image_path) {
+      this.logger.warn('No image_path provided in request')
+    } else {
+      this.logger.log(`Processing image_path: ${image_path}`)
+    }
+
     // ファイルパスに基づいてモックレスポンスを返す
-    return await this.getMockResponse(image_path)
+    const response = await this.getMockResponse(image_path)
+    this.logger.log(`Returning response:`, response)
+    this.logger.log('=== Mock API: Request completed ===')
+
+    return response
   }
 
   private async getMockResponse(imagePath: string): Promise<ClassifyResponse> {
@@ -117,6 +139,7 @@ export class ClassifyController {
     }
 
     // デフォルト（その他のファイルパス）
+    this.logger.log('No specific pattern matched, returning default response')
     return {
       success: true,
       message: 'success',
