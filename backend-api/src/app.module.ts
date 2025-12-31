@@ -3,15 +3,11 @@ import { ConfigModule } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
-import { UploadAndClassifyController } from '@/presentation/controllers/upload-and-classify.controller'
-import { UploadAndClassifyService } from '@/application/services/upload-and-classify.service'
-import { MockUploadService } from '@/infrastructure/upload/mock-upload.service'
-import { ClassificationApiService } from '@/infrastructure/external-api/classification-api.service'
-import { AiAnalysisLogRepository } from '@/infrastructure/repositories/ai-analysis-log.repository'
-import { AiAnalysisLog } from '@/domain/entities/ai-analysis-log.entity'
+import { ReceiptAnalysisModule } from './modules/receipt-analysis/receipt-analysis.module'
 
 @Module({
   imports: [
+    // .env ファイルから process.env にロード & ConfigService を DI 可能にする
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
@@ -23,19 +19,14 @@ import { AiAnalysisLog } from '@/domain/entities/ai-analysis-log.entity'
       username: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'receipt_snap_db',
-      entities: [AiAnalysisLog],
+      autoLoadEntities: true, // モジュールで登録されたエンティティを自動ロード
       synchronize: process.env.NODE_ENV === 'development',
       logging: process.env.NODE_ENV === 'development',
     }),
-    TypeOrmModule.forFeature([AiAnalysisLog]),
+    // ドメインモジュール
+    ReceiptAnalysisModule,
   ],
-  controllers: [AppController, UploadAndClassifyController],
-  providers: [
-    AppService,
-    UploadAndClassifyService,
-    MockUploadService,
-    ClassificationApiService,
-    AiAnalysisLogRepository,
-  ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

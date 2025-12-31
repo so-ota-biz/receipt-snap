@@ -81,13 +81,6 @@ export class ClassifyController {
     }
 
     // エラー系
-    if (imagePath.includes('file_not_found')) {
-      return {
-        success: false,
-        message: 'Error:E40004',
-        estimated_data: {}
-      }
-    }
     if (imagePath.includes('corrupted')) {
       return {
         success: false,
@@ -109,7 +102,7 @@ export class ClassifyController {
         estimated_data: {}
       }
     }
-    if (imagePath.includes('text_unreadable')) {
+    if (imagePath.includes('unreadable')) {
       return {
         success: false,
         message: 'Error:E41007',
@@ -123,7 +116,7 @@ export class ClassifyController {
         estimated_data: {}
       }
     }
-    if (imagePath.includes('multiple_receipts')) {
+    if (imagePath.includes('multiple')) {
       return {
         success: false,
         message: 'Error:E41009',
