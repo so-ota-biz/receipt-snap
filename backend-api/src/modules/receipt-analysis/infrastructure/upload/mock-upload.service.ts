@@ -40,11 +40,4 @@ export class MockUploadService implements IUploadService {
     await new Promise((resolve) => setTimeout(resolve, 1000))
     return imagePath
   }
-
-  /**
-   * 利用可能なファイル名一覧を取得
-   */
-  getAvailableFileNames(): string[] {
-    return Object.keys(FILE_NAME_TO_PATH_MAPPING)
-  }
 }

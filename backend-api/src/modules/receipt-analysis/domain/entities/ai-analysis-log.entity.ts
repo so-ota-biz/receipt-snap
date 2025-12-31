@@ -6,7 +6,7 @@ import { Confidence } from '../value-objects/confidence.vo'
  */
 export class AiAnalysisLog {
   id: number
-  imagePath: ImagePath | null
+  imagePath: ImagePath | string | null
   success: boolean
   message: string | null
   classNumber: number | null
@@ -16,7 +16,7 @@ export class AiAnalysisLog {
 
   constructor(
     id: number,
-    imagePath: ImagePath | null,
+    imagePath: ImagePath | string | null,
     success: boolean,
     message: string | null,
     classNumber: number | null,
@@ -36,17 +36,19 @@ export class AiAnalysisLog {
 
   /**
    * エラー時のログを生成
+   *
+   * @param imagePath - ImagePath（アップロード後）、string（ファイル名のみ）、またはnull
    */
   static createErrorLog(
     id: number,
-    fileName: string,
+    imagePath: ImagePath | string | null,
     errorMessage: string,
     requestTimestamp: Date,
     responseTimestamp: Date,
   ): AiAnalysisLog {
     return new AiAnalysisLog(
       id,
-      null, // エラー時はImagePath未生成
+      imagePath,
       false,
       errorMessage,
       null,

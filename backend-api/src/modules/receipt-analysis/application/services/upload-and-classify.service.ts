@@ -4,19 +4,31 @@ import { AiAnalysisLog } from '../../domain/entities/ai-analysis-log.entity'
 import { ImagePath } from '../../domain/value-objects/image-path.vo'
 import { Confidence } from '../../domain/value-objects/confidence.vo'
 import type { IAiAnalysisLogRepository } from '../../domain/repositories/ai-analysis-log.repository.interface'
-import type { IClassificationService } from '../interfaces/classification.interface'
+import type {
+  IClassificationService,
+  ClassificationResult,
+} from '../interfaces/classification.interface'
 import type { IUploadService } from '../interfaces/upload.interface'
 
 /**
  * アップロード＆分類処理のレスポンス型
+ * ErrorResponseとの互換性を持つ
  */
 export interface UploadAndClassifyResult {
   /** 処理成功可否 */
   success: boolean
   /** レスポンスメッセージ */
   message: string
+  /** タイムスタンプ */
+  timestamp: string
   /** エラーコード（エラー時のみ） */
   errorCode?: string
+  /** エラー名（エラー時のみ） */
+  errorName?: string
+  /** ユーザー向けメッセージ（エラー時のみ） */
+  userMessage?: string
+  /** 推奨アクション（エラー時のみ） */
+  recommendedActions?: readonly string[]
   /** 分類結果データ（成功時のみ） */
   data?: {
     /** 領収書クラスID（0-4） */
@@ -60,88 +72,57 @@ export class UploadAndClassifyService {
    * @throws ApplicationError - バリデーションエラー時
    */
   async uploadAndClassify(fileName: string): Promise<UploadAndClassifyResult> {
-    // STEP 0. リクエストタイムスタンプ記録
     const requestTimestamp = new Date()
+    let imagePathString: string | null = null
 
     try {
       // STEP 1. 画像ファイルバリデーション（モック実装）
-      // 不正なファイルはアップロード前に弾く（本運用: バイナリに対してサイズ・形式・縦横比などをチェック）
       this.validateMockImageFile(fileName)
 
       // STEP 2. ファイルアップロード処理（モック：ファイル名→パス変換）
-      const imagePathString = await this.uploadService.uploadFile(fileName)
+      imagePathString = await this.uploadService.uploadFile(fileName)
 
       // STEP 3. パス形式バリデーション（生成されたパスの検証）
       this.validatePathFormat(imagePathString)
 
       // STEP 4. AI-API呼び出し
       const apiResponse = await this.classificationApi.classify(imagePathString)
-
-      // STEP 5. レスポンスタイムスタンプ記録
       const responseTimestamp = new Date()
 
-      // STEP 6. DB保存（ドメインエンティティ作成）
-      const imagePath = new ImagePath(imagePathString)
-      const confidence =
-        apiResponse.estimated_data.confidence !== undefined
-          ? new Confidence(apiResponse.estimated_data.confidence)
-          : null
-
-      const log = AiAnalysisLog.createSuccessLog(
-        0,
-        imagePath,
-        apiResponse.message,
-        apiResponse.estimated_data.class || null,
-        confidence,
+      // STEP 5. DB保存 & レスポンス返却
+      return await this.handleApiResponse(
+        apiResponse,
+        imagePathString,
         requestTimestamp,
         responseTimestamp,
       )
-
-      await this.repository.save(log)
-
-      // STEP 7. レスポンス返却
-      if (apiResponse.success) {
-        const confidenceValue = apiResponse.estimated_data.confidence || 0
-        const requiresConfirmation = confidenceValue < 0.85 // 信頼度0.85未満なら確認必要
-
-        return {
-          success: true,
-          message: '画像の分類が完了しました',
-          data: {
-            class: apiResponse.estimated_data.class ?? undefined,
-            confidence: confidenceValue,
-            uploadedPath: imagePathString, // OCR APIリクエストで使用するため返す
-            requiresConfirmation: requiresConfirmation,
-          },
-        }
-      } else {
-        return {
-          success: false,
-          message: apiResponse.message,
-          errorCode: this.extractErrorCode(apiResponse.message),
-        }
-      }
     } catch (error: unknown) {
-      // エラー時もDB保存
       const responseTimestamp = new Date()
-
-      // エラーメッセージを安全に取得
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      const imagePathForLog = imagePathString ? new ImagePath(imagePathString) : fileName
 
-      // エラー時のドメインエンティティ生成
+      // エラーログ保存
       const log = AiAnalysisLog.createErrorLog(
         0,
-        fileName, // エラー時はfileNameをそのまま記録
+        imagePathForLog,
         errorMessage,
         requestTimestamp,
         responseTimestamp,
       )
-
       await this.repository.save(log)
+
+      // エラーレスポンス返却
+      if (error instanceof ApplicationError) {
+        return {
+          ...error.toJSON(),
+          timestamp: responseTimestamp.toISOString(),
+        }
+      }
 
       return {
         success: false,
         message: errorMessage,
+        timestamp: responseTimestamp.toISOString(),
         errorCode: this.extractErrorCode(errorMessage),
       }
     }
@@ -157,6 +138,88 @@ export class UploadAndClassifyService {
    */
   async getRecentLogs(limit = 10): Promise<AiAnalysisLog[]> {
     return await this.repository.findRecent(limit)
+  }
+
+  /**
+   * AI-APIレスポンスを処理し、DB保存とレスポンス返却を行う
+   *
+   * @param apiResponse - AI-APIからのレスポンス
+   * @param imagePathString - アップロード済み画像パス
+   * @param requestTimestamp - リクエスト開始時刻
+   * @param responseTimestamp - レスポンス受信時刻
+   * @returns クライアントへのレスポンス
+   */
+  private async handleApiResponse(
+    apiResponse: ClassificationResult,
+    imagePathString: string,
+    requestTimestamp: Date,
+    responseTimestamp: Date,
+  ): Promise<UploadAndClassifyResult> {
+    const imagePath = new ImagePath(imagePathString)
+    const confidence = this.createConfidenceSafely(apiResponse.estimated_data.confidence)
+
+    // DB保存
+    if (apiResponse.success) {
+      const log = AiAnalysisLog.createSuccessLog(
+        0,
+        imagePath,
+        apiResponse.message,
+        apiResponse.estimated_data.class || null,
+        confidence,
+        requestTimestamp,
+        responseTimestamp,
+      )
+      await this.repository.save(log)
+
+      // 成功レスポンス
+      const confidenceValue = confidence ? confidence.getValue() : 0
+      return {
+        success: true,
+        message: '画像の分類が完了しました',
+        timestamp: responseTimestamp.toISOString(),
+        data: {
+          class: apiResponse.estimated_data.class ?? undefined,
+          confidence: confidenceValue,
+          uploadedPath: imagePathString,
+          requiresConfirmation: confidenceValue < 0.85,
+        },
+      }
+    } else {
+      const log = AiAnalysisLog.createErrorLog(
+        0,
+        imagePath,
+        apiResponse.message,
+        requestTimestamp,
+        responseTimestamp,
+      )
+      await this.repository.save(log)
+
+      // エラーレスポンス
+      return {
+        success: false,
+        message: apiResponse.message,
+        timestamp: responseTimestamp.toISOString(),
+        errorCode: this.extractErrorCode(apiResponse.message),
+      }
+    }
+  }
+
+  /**
+   * Confidenceオブジェクトを安全に生成
+   *
+   * @param confidenceValue - 信頼度の値
+   * @returns Confidenceオブジェクト、または生成失敗時はnull
+   */
+  private createConfidenceSafely(confidenceValue: number | undefined): Confidence | null {
+    if (confidenceValue === undefined) {
+      return null
+    }
+
+    try {
+      return new Confidence(confidenceValue)
+    } catch {
+      return null
+    }
   }
 
   /**
@@ -201,11 +264,30 @@ export class UploadAndClassifyService {
    *    - 最小200×200px以上（法定要件）
    *    - エラー時: E41004
    *
-   * @param fileName - ファイル名（モック実装では未使用）
+   * @param fileName - 検証対象のファイル名
+   * @throws ApplicationError - バリデーションエラー時 (E40003, E40004, E40005)
    */
   private validateMockImageFile(fileName: string): void {
-    // モック実装：常に検証成功として扱う
-    return
+    const lowerFileName = fileName.toLowerCase()
+
+    // MIMEタイプチェック（モック）
+    if (lowerFileName.includes('invalid-mime') || lowerFileName.includes('invalid_mime')) {
+      throw new ApplicationError('E40006')
+    }
+
+    // ファイルサイズチェック（モック）
+    if (lowerFileName.includes('too-large') || lowerFileName.includes('too_large')) {
+      throw new ApplicationError('E40004')
+    }
+
+    // 画像サイズチェック（モック）
+    if (
+      lowerFileName.includes('invalid-dimensions') ||
+      lowerFileName.includes('invalid_dimensions')
+    ) {
+      throw new ApplicationError('E40005')
+    }
+    // 上記のいずれにも該当しない場合はバリデーション成功
   }
 
   /**

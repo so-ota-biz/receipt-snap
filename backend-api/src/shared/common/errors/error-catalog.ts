@@ -28,6 +28,31 @@ export const ERROR_CATALOG = {
     userMessage: 'ファイル名が長すぎます。再度アップロードしてください',
     recommendedActions: ['撮影し直す'],
   },
+  E40004: {
+    code: 'E40004',
+    name: 'File size exceeded',
+    httpStatus: 400,
+    message: 'ファイルサイズが上限を超えています',
+    userMessage: 'ファイルサイズが大きすぎます（上限: 10MB）。画質を下げて再度撮影してください',
+    recommendedActions: ['撮影し直す'],
+  },
+  E40005: {
+    code: 'E40005',
+    name: 'Invalid image dimensions',
+    httpStatus: 400,
+    message: '画像サイズが不正です',
+    userMessage:
+      '画像の解像度が不正です。推奨サイズ（200dpi以上、最大4096x4096px）で撮影してください',
+    recommendedActions: ['撮影し直す'],
+  },
+  E40006: {
+    code: 'E40006',
+    name: 'Invalid MIME type',
+    httpStatus: 400,
+    message: '無効なファイル形式です',
+    userMessage: '画像ファイル（JPEG, PNG）のみアップロード可能です。再度撮影してください',
+    recommendedActions: ['対応ファイル形式で撮影し直す'],
+  },
   E41001: {
     code: 'E41001',
     name: 'Unsupported image format',
