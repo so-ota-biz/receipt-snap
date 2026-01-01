@@ -1,0 +1,27 @@
+# 依存関係
+node_modules/
+
+# ビルド出力
+.next/
+out/
+build/
+dist/
+
+# キャッシュ
+.cache/
+
+# ログファイル
+*.log
+
+# 環境変数ファイル
+.env
+.env.local
+.env*.local
+
+# パッケージマネージャーのロックファイル
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# その他
+.DS_Store
