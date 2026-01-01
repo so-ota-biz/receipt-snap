@@ -51,7 +51,7 @@ export const ERROR_CATALOG = {
     httpStatus: 400,
     message: '無効なファイル形式です',
     userMessage: '画像ファイル（JPEG, PNG）のみアップロード可能です。再度撮影してください',
-    recommendedActions: ['対応ファイル形式で撮影し直す'],
+    recommendedActions: ['撮影し直す'],
   },
   E41001: {
     code: 'E41001',
@@ -126,7 +126,7 @@ export const ERROR_CATALOG = {
     httpStatus: 504,
     message: '処理がタイムアウトしました（60秒超過）',
     userMessage: '処理に時間がかかりすぎています。時間をおいて再試行してください',
-    recommendedActions: ['再試行'],
+    recommendedActions: ['時間をおいて再試行', 'サポートに連絡'],
   },
 } as const
 
