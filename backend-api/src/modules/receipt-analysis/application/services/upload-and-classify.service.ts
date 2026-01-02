@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common'
 import { ApplicationError } from '@/shared/common/errors/application.error'
+import { ERROR_CATALOG, ErrorCode } from '@/shared/common/errors/error-catalog'
 import { AiAnalysisLog } from '../../domain/entities/ai-analysis-log.entity'
 import { ImagePath } from '../../domain/value-objects/image-path.vo'
 import { Confidence } from '../../domain/value-objects/confidence.vo'
@@ -119,25 +120,9 @@ export class UploadAndClassifyService {
         }
       }
 
-      return {
-        success: false,
-        message: errorMessage,
-        timestamp: responseTimestamp.toISOString(),
-        errorCode: this.extractErrorCode(errorMessage),
-      }
+      // 一般的なエラーの場合、エラーコードを抽出してカタログから情報を取得
+      return this.createErrorResponse(errorMessage, responseTimestamp)
     }
-  }
-
-  /**
-   * 最新のAI分析ログを取得
-   *
-   * リクエストタイムスタンプの降順で、指定件数のログを取得します。
-   *
-   * @param limit - 取得件数（デフォルト: 10）
-   * @returns AI分析ログの配列
-   */
-  async getRecentLogs(limit = 10): Promise<AiAnalysisLog[]> {
-    return await this.repository.findRecent(limit)
   }
 
   /**
@@ -194,13 +179,8 @@ export class UploadAndClassifyService {
       )
       await this.repository.save(log)
 
-      // エラーレスポンス
-      return {
-        success: false,
-        message: apiResponse.message,
-        timestamp: responseTimestamp.toISOString(),
-        errorCode: this.extractErrorCode(apiResponse.message),
-      }
+      // エラーレスポンス - エラーカタログから完全な情報を取得
+      return this.createErrorResponse(apiResponse.message, responseTimestamp)
     }
   }
 
@@ -305,5 +285,43 @@ export class UploadAndClassifyService {
   private extractErrorCode(message: string): string | undefined {
     const match = message.match(/Error:([A-Z0-9]+)/)
     return match ? match[1] : undefined
+  }
+
+  /**
+   * エラーメッセージからエラーレスポンスを構築
+   *
+   * エラーメッセージからエラーコードを抽出し、ERROR_CATALOG から完全な情報を取得します。
+   * エラーコードが見つからない場合は、簡易的なレスポンスを返します。
+   *
+   * @param message - エラーメッセージ
+   * @param timestamp - レスポンスタイムスタンプ
+   * @returns エラーレスポンス
+   */
+  private createErrorResponse(
+    message: string,
+    timestamp: Date,
+  ): Omit<UploadAndClassifyResult, 'data'> {
+    const errorCode = this.extractErrorCode(message)
+
+    if (errorCode && errorCode in ERROR_CATALOG) {
+      const errorInfo = ERROR_CATALOG[errorCode as ErrorCode]
+      return {
+        success: false,
+        errorCode: errorCode,
+        errorName: errorInfo.name,
+        message: errorInfo.message,
+        userMessage: errorInfo.userMessage,
+        recommendedActions: errorInfo.recommendedActions,
+        timestamp: timestamp.toISOString(),
+      }
+    }
+
+    // エラーコードが見つからない場合
+    return {
+      success: false,
+      message: message,
+      timestamp: timestamp.toISOString(),
+      errorCode: errorCode,
+    }
   }
 }
