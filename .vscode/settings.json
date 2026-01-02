@@ -35,7 +35,7 @@
 
   // ESLint との併用時（保存時に自動修正）
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
+    "source.fixAll.eslint": "explicit"
   },
 
   // Prettier に関する警告を出す
