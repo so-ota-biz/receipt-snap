@@ -6,13 +6,7 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   {
-    ignores: [
-      'eslint.config.mjs',
-      'dist/**',
-      'node_modules/**',
-      'src/types/database.types.ts',
-      'generate-jwt-keys.js'
-    ]
+    ignores: ['eslint.config.mjs', 'dist/**', 'node_modules/**', 'jest.config.js'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -21,14 +15,14 @@ export default tseslint.config(
     languageOptions: {
       globals: {
         ...globals.node,
-        ...globals.jest
+        ...globals.jest,
       },
       sourceType: 'commonjs',
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname
-      }
-    }
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
   },
   {
     rules: {
@@ -41,8 +35,8 @@ export default tseslint.config(
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
-          destructuredArrayIgnorePattern: '^_'
-        }
+          destructuredArrayIgnorePattern: '^_',
+        },
       ],
       'prettier/prettier': [
         'error',
@@ -52,9 +46,15 @@ export default tseslint.config(
           trailingComma: 'all',
           printWidth: 100,
           tabWidth: 2,
-          endOfLine: 'auto'
-        }
-      ]
-    }
-  }
+          endOfLine: 'auto',
+        },
+      ],
+    },
+  },
+  {
+    files: ['**/*.spec.ts', '**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+    },
+  },
 )
