@@ -28,6 +28,7 @@ function App() {
   // 確認画面とOCR処理用の状態
   const [selectedReceiptType, setSelectedReceiptType] = useState<number | null>(null)
   const [showOcrSuccess, setShowOcrSuccess] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
 
   // タイムアウト制御: 再試行可能までの秒数
   const [retryAvailableIn, setRetryAvailableIn] = useState(0)
@@ -56,7 +57,8 @@ function App() {
 
     setLoading(true)
     setResult(null)
-    setShowOcrSuccess(false) // OCR結果もクリア
+    setSelectedReceiptType(null)
+    setShowOcrSuccess(false)
 
     try {
       const response = await uploadAndClassify(fileName)
@@ -144,7 +146,12 @@ function App() {
   // 確認画面の「確定」ボタン
   const handleConfirmReceipt = async () => {
     if (result?.data && selectedReceiptType !== null) {
-      await handleOcrRequest(result.data.uploadedPath, selectedReceiptType)
+      setConfirmLoading(true)
+      try {
+        await handleOcrRequest(result.data.uploadedPath, selectedReceiptType)
+      } finally {
+        setConfirmLoading(false)
+      }
     }
   }
 
@@ -268,15 +275,17 @@ function App() {
                   { value: '2', label: CLASS_NAMES[2] },
                   { value: '3', label: CLASS_NAMES[3] },
                   { value: '4', label: CLASS_NAMES[4] },
+                  { value: '9', label: CLASS_NAMES[9] },
                 ]}
               />
 
               <Button
+                leftSection={confirmLoading ? <Loader size="sm" /> : undefined}
                 onClick={handleConfirmReceipt}
-                disabled={selectedReceiptType === null}
+                disabled={selectedReceiptType === null || confirmLoading}
                 fullWidth
               >
-                確定してOCR処理を実行
+                {confirmLoading ? 'OCR処理中...' : '確定してOCR処理を実行'}
               </Button>
             </Stack>
           </Paper>

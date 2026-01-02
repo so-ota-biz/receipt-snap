@@ -69,7 +69,7 @@ export class ClassifyController {
       return {
         success: true,
         message: 'success',
-        estimated_data: { class: 0, confidence: 0.8534 }
+        estimated_data: { class: 0, confidence: 0.8234 }
       }
     }
     if (imagePath.includes('restaurant')) {
@@ -77,6 +77,13 @@ export class ClassifyController {
         success: true,
         message: 'success',
         estimated_data: { class: 1, confidence: 0.7823 }
+      }
+    }
+    if (imagePath.includes('parking')) {
+      return {
+        success: true,
+        message: 'success',
+        estimated_data: { class: 9, confidence: 0.4521 }
       }
     }
 
