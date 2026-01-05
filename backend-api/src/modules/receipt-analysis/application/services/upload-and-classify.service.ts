@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common'
+import { Injectable, Inject, Logger } from '@nestjs/common'
 import { ApplicationError } from '@/shared/common/errors/application.error'
 import { ERROR_CATALOG, ErrorCode } from '@/shared/common/errors/error-catalog'
 import { AiAnalysisLog } from '../../domain/entities/ai-analysis-log.entity'
@@ -45,6 +45,8 @@ export interface UploadAndClassifyResult {
 
 @Injectable()
 export class UploadAndClassifyService {
+  private readonly logger = new Logger(UploadAndClassifyService.name)
+
   constructor(
     @Inject('IUploadService')
     private readonly uploadService: IUploadService,
@@ -102,17 +104,25 @@ export class UploadAndClassifyService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       const imagePathForLog = imagePathString ? new ImagePath(imagePathString) : fileName
 
-      // エラーログ保存
-      const log = AiAnalysisLog.createErrorLog(
-        0,
-        imagePathForLog,
-        errorMessage,
-        requestTimestamp,
-        responseTimestamp,
-      )
-      await this.repository.save(log)
+      // エラーログ保存（失敗してもレスポンスは必ず返す）
+      try {
+        const log = AiAnalysisLog.createErrorLog(
+          0,
+          imagePathForLog,
+          errorMessage,
+          requestTimestamp,
+          responseTimestamp,
+        )
+        await this.repository.save(log)
+      } catch (dbError) {
+        // DB保存失敗をログ出力
+        this.logger.error(
+          'Failed to save error log to database',
+          dbError instanceof Error ? dbError.stack : String(dbError),
+        )
+      }
 
-      // エラーレスポンス返却
+      // エラーレスポンス返却（DB保存の成否に関わらず必ず実行）
       if (error instanceof ApplicationError) {
         return {
           ...error.toJSON(),
