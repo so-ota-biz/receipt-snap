@@ -150,7 +150,7 @@ describe('UploadAndClassifyService', () => {
       mockUploadService.uploadFile.mockResolvedValue(imagePath)
       classificationApiService.classify.mockResolvedValue(apiResponse)
       const mockLog = {
-        id: { getValue: () => 125 },
+        id: 125,
         imagePath: new ImagePath(imagePath),
       } as unknown as AiAnalysisLog
       repository.save.mockResolvedValue(mockLog)
@@ -178,7 +178,7 @@ describe('UploadAndClassifyService', () => {
 
       mockUploadService.uploadFile.mockRejectedValue(error)
       const mockLog = {
-        id: { getValue: () => 126 },
+        id: 126,
       } as unknown as AiAnalysisLog
       repository.save.mockResolvedValue(mockLog)
 
@@ -205,7 +205,7 @@ describe('UploadAndClassifyService', () => {
 
       mockUploadService.uploadFile.mockRejectedValue(error)
       const mockLog = {
-        id: { getValue: () => 127 },
+        id: 127,
       } as unknown as AiAnalysisLog
       repository.save.mockResolvedValue(mockLog)
 
